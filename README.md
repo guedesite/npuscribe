@@ -1,68 +1,170 @@
 # NPUScribe
 
-Dictée vocale locale pour Windows, **exécutée sur le NPU Intel**.
-Remplace un service de dictée en ligne : la combinaison de touches lance
-l'écoute, la parole est transcrite au fil de l'eau, et le texte est collé au
-curseur.
+[![build](https://github.com/guedesite/npuscribe/actions/workflows/build.yml/badge.svg)](https://github.com/guedesite/npuscribe/actions/workflows/build.yml)
+[![licence](https://img.shields.io/badge/licence-Apache--2.0-blue.svg)](LICENSE)
 
-Rien ne passe par le GPU. Le CPU ne fait que recopier des blocs audio de 20 ms.
+**Dictée vocale locale pour Windows, exécutée sur le NPU Intel.**
+Aucun cloud, aucune clé API, aucun passage sur le GPU. Vous parlez, le texte
+arrive au curseur.
 
-## Matériel mesuré
+![La pastille pendant l'écoute](assets/pastille.png)
 
-Intel Core Ultra 7 265K (Arrow Lake-S), NPU 3 « Intel AI Boost », pilote
-32.0.100.5540, OpenVINO 2026.4.1.
+## Ce que ça fait
 
-| Modèle | RAM | Vitesse | Quantification |
-|---|---|---|---|
-| **whisper-large-v3-turbo FP16** (retenu) | **3,6 Go** | 1,5 s pour 20 s d'audio | **aucune** |
-| whisper-large-v3-turbo INT4 | 4,2 Go | 3,3 s | int4 |
-| whisper-large-v3 INT8 | — | — | rejeté par le NPU (`ZE_RESULT_ERROR_INVALID_NATIVE_BINARY`) |
-| whisper-large-v3 FP16 | — | — | rejeté par le NPU (même erreur) |
+- **Maintien pour parler, double appui pour l'écoute continue.** La combinaison
+  de touches est configurable (`Ctrl + Win` par défaut).
+- **Transcription au fil de l'eau.** Le texte apparaît pendant que vous parlez,
+  pas après. Une dictée longue ne s'accumule pas en mémoire.
+- **Collage au curseur.** Le texte est copié puis collé dans l'application
+  active, et le presse-papier précédent est restauré.
+- **Historique.** Chaque dictée est conservée ; on peut la rechercher, la
+  relire, la recopier ou la recoller.
+- **Dictionnaire.** Vos noms propres et vos tournures, appliqués après
+  transcription.
+- **Choix du micro** et **diagnostic** en direct : niveau du signal, latence,
+  état du modèle.
 
-La variante int4 est à la fois **plus lente et plus gourmande** que le FP16 :
-la quantification n'apporte rien ici, d'où le choix du FP16.
+## Prérequis
 
-Qualité : 10,7 % de mots différents du `large-v3` FP16 de référence sur un
-enregistrement français de 17 minutes, l'essentiel de l'écart étant de la
-ponctuation et de la paraphrase, pas des erreurs de reconnaissance.
+- Windows 11 sur **Intel Core Ultra** avec NPU « Intel AI Boost » et son
+  pilote à jour.
+- Environ 6 Go d'espace disque (modèle 1,6 Go + cache de compilation 2,2 Go +
+  programme 352 Mo).
+- Une connexion internet au premier lancement, pour télécharger le modèle.
+
+Sans NPU, l'application ne peut pas fonctionner : c'est le principe, pas une
+option.
 
 ## Installation
 
-### L'installateur (recommandé)
+Télécharger `NPUScribe-Setup-x.y.z.exe` dans les
+[Releases](https://github.com/guedesite/npuscribe/releases), ou dans les
+artefacts de la
+[dernière exécution](https://github.com/guedesite/npuscribe/actions/workflows/build.yml)
+de la CI.
 
-Télécharger `NPUScribe-Setup-x.y.z.exe` depuis les *Releases* GitHub et le
-lancer. Installation **par utilisateur**, sans droits administrateur :
+L'installateur ne demande **aucun droit administrateur** :
 
-- programme dans `%LOCALAPPDATA%\Programs\NPUScribe` ;
-- raccourcis dans le menu Démarrer, désinstalleur dans « Applications et
-  fonctionnalités » ;
-- lancement automatique à l'ouverture de session (décochable dans l'assistant
-  et dans le menu de l'icône) ;
-- au premier lancement, le modèle (1,6 Go) est téléchargé puis compilé pour le
-  NPU — cinq à huit minutes, une seule fois. Les lancements suivants prennent
-  trois secondes.
+| | |
+|---|---|
+| Programme | `%LOCALAPPDATA%\Programs\NPUScribe` |
+| Données, modèle, cache, historique | `%LOCALAPPDATA%\NPUScribe` |
+| Raccourcis | menu Démarrer (bureau en option) |
+| Désinstallation | « Applications et fonctionnalités », avec proposition de supprimer aussi les ~4 Go de données |
 
-Données, modèle, cache et historique vivent dans `%LOCALAPPDATA%\NPUScribe`.
-La désinstallation propose de les supprimer.
+Le lancement automatique à l'ouverture de session est activé par défaut et
+peut être décoché dans l'assistant comme dans le menu de l'icône.
 
-### Depuis les sources
+> L'installateur n'est pas signé. Windows affichera « Windows a protégé votre
+> PC » au premier lancement : *Informations complémentaires* → *Exécuter quand
+> même*.
+
+### Premier démarrage
+
+Le modèle (1,6 Go) est téléchargé puis compilé pour le NPU. **Comptez cinq à
+huit minutes, une seule fois** — la pastille indique où elle en est. Les
+lancements suivants prennent trois secondes.
+
+## Utilisation
+
+La combinaison par défaut est **Ctrl + Win**.
+
+| Geste | Effet |
+|---|---|
+| maintenir la combinaison | dicte tant que les touches restent enfoncées |
+| double appui | passe en **écoute continue** : vous pouvez lâcher les touches |
+| nouvel appui en continu | arrête et insère le texte |
+| `Échap` pendant l'écoute | annule, rien n'est inséré |
+
+La pastille en bas de l'écran montre l'onde et la transcription en cours. Si le
+micro choisi ne capte rien, elle passe au rouge et nomme le périphérique.
+
+L'icône de la zone de notification donne accès à l'historique, au diagnostic,
+au choix du micro, aux réglages, au lancement automatique et à la fermeture.
+Son infobulle reflète l'état courant.
+
+## Réglages
+
+`%LOCALAPPDATA%\NPUScribe\config.json`, créé au premier lancement, ou l'entrée
+« Paramètres… » du menu.
+
+| Clé | Rôle |
+|---|---|
+| `hotkey` | combinaison globale, ex. `ctrl+win`, `ctrl+alt+space` |
+| `input_device` | nom du micro ; vide = périphérique Windows par défaut |
+| `language` | `fr`, `en` ou `auto` |
+| `dictionary` | termes à privilégier |
+| `replacements` | corrections déterministes, insensibles à la casse |
+| `silence_ms` | silence qui clôt une phrase (650 ms par défaut) |
+| `max_chunk_s` | durée maximale d'un segment envoyé au NPU |
+| `paste_mode` | `ctrl+v`, ou `ctrl+shift+v` pour les terminaux |
+| `autostart` | lancement à l'ouverture de session |
+
+## Sous le capot
+
+```
+crochet clavier (WH_KEYBOARD_LL)
+        │
+        ▼
+capture micro 16 kHz ──► segmentation (VAD énergie, trames de 20 ms)
+        │                         │
+        │                         ▼
+        │                 segments ≤ 24 s
+        ▼                         ▼
+  pastille (GDI)  ◄──── Whisper large-v3-turbo FP16 sur NPU
+                                  │
+                                  ▼
+                 presse-papier + Ctrl+V (SendInput)
+```
+
+Le module d'inférence est OpenVINO GenAI. Le modèle est
+`whisper-large-v3-turbo` en **FP16, sans aucune quantification** : la variante
+int4 est à la fois plus lente et plus gourmande en mémoire sur cette puce.
+
+## Coût mesuré
+
+Intel Core Ultra 7 265K (Arrow Lake-S), NPU 3, pilote 32.0.100.5540,
+OpenVINO 2026.4.1.
+
+| Situation | CPU | RAM |
+|---|---|---|
+| Au repos | **0,000 %** d'un cœur | 3,6 Go |
+| Pendant l'écoute | **1,6 %** d'un cœur | 3,6 Go |
+| Coût d'une frappe clavier | **20 µs** | — |
+| Une image de pastille | **0,38 ms** | — |
+
+Après la toute première compilation, la mémoire du compilateur NPU n'est pas
+rendue au système : comptez 4,6 Go jusqu'au redémarrage suivant.
+
+## Limites connues
+
+- `Ctrl+V` n'est pas honoré par certains terminaux et applications élevées ;
+  `paste_mode` accepte `ctrl+shift+v` pour ces cas.
+- Les segments sont transcrits indépendamment : sans le contexte des phrases
+  précédentes, un homophone isolé peut être mal choisi.
+- `large-v3` complet et sa variante int8 sont **rejetés par ce NPU** ; `turbo`
+  est le plafond matériel.
+- L'installateur n'est pas signé.
+
+## Développement
 
 ```bash
 python -m venv .venv
-.venv\Scripts\python.exe -m pip install -r requirements.txt
-.venv\Scripts\python.exe tools\fetch_model.py     # télécharge le modèle
-.venv\Scripts\python.exe tools\warmup.py          # compile pour le NPU (5-8 min)
-.venv\Scripts\pythonw.exe run.pyw
+.venv\Scripts\python.exe -m pip install -r requirements.txt -r requirements-dev.txt
+
+.venv\Scripts\python.exe tools\fetch_model.py     # modèle OpenVINO
+.venv\Scripts\python.exe tools\warmup.py          # compilation NPU (5-8 min)
+.venv\Scripts\pythonw.exe run.pyw                 # depuis les sources
 ```
 
-### Intégration continue
+| Outil | Rôle |
+|---|---|
+| `tools/selftest.py` | bout en bout sans micro : un WAV tient lieu de flux audio |
+| `tools/make_icon.py` | régénère `assets/app.ico` |
+| `tools/warmup.py` | précompile le modèle pour le NPU |
+| `research/` | sondes matérielles et mesures qui ont guidé les choix |
 
-`.github/workflows/build.yml` construit l'exécutable et l'installateur à chaque
-poussée sur `main`, et les publie dans une *Release* quand un tag `v*` est
-poussé. Binaires produits : `dist\NPUScribe\` (dossier autonome) et
-`dist_installer\NPUScribe-Setup-<version>.exe`.
-
-En local, la même chaîne :
+### Construire l'installateur
 
 ```bash
 python tools\make_icon.py
@@ -70,127 +172,24 @@ pyinstaller NPUScribe.spec --noconfirm
 "C:\Program Files\Inno Setup 7\ISCC.exe" installer\npuscribe.iss
 ```
 
-## Utilisation
+`.github/workflows/build.yml` enchaîne ces étapes à chaque poussée sur `main`
+et publie l'installateur en artefact. Pousser un tag `v*` attache l'installateur
+à une Release.
 
-```bash
-.venv\Scripts\pythonw.exe run.pyw
-```
+## Pièges du NPU, déjà traités
 
-La combinaison par défaut est **Ctrl + Win**.
-
-| Geste | Effet |
-|---|---|
-| maintenir la combinaison | dicte tant que les touches restent enfoncées |
-| double appui | passe en **écoute continue**, les touches peuvent être lâchées |
-| nouvel appui en continu | arrête et insère le texte |
-| `Échap` pendant l'écoute | annule, rien n'est inséré |
-
-À l'arrêt, le texte est copié et collé au curseur ; le presse-papier précédent
-est restauré. La pastille en bas de l'écran montre l'onde, la transcription en
-cours, et signale **« Aucun son »** si le micro choisi ne capte rien.
-
-L'icône de la zone de notification donne accès à l'historique, au diagnostic,
-au choix du micro, aux réglages, au lancement automatique et à la fermeture.
-Son infobulle reflète l'état courant (prêt, écoute, transcription).
-
-## Historique
-
-Chaque dictée est conservée dans `history.jsonl` avec sa date, sa durée, la
-langue et le micro utilisé. La fenêtre **Historique…** permet de rechercher,
-relire, **copier** une transcription, la **recoller au curseur** dans
-l'application active, ou la supprimer.
-
-## Diagnostic
-
-La fenêtre **Diagnostic…** affiche en direct : micro utilisé, état (prêt,
-écoute, maintien), modèle chargé, raccourci actif, latence de la dernière
-transcription, niveau du micro et dernière transcription produite. C'est le
-moyen de vérifier d'un coup d'œil que la chaîne complète fonctionne.
-
-## Réglages
-
-`config.json`, créé au premier lancement, ou l'entrée « Paramètres… » du menu.
-
-| Clé | Rôle |
-|---|---|
-| `hotkey` | combinaison globale, ex. `ctrl+win`, `ctrl+alt+space` |
-| `input_device` | nom du micro ; vide = périphérique Windows par défaut |
-| `language` | `fr`, `en` ou `auto` |
-| `dictionary` | termes à privilégier (appliqués en post-traitement) |
-| `replacements` | corrections déterministes, insensibles à la casse |
-| `silence_ms` | silence qui clôt une phrase |
-| `max_chunk_s` | durée maximale d'un segment envoyé au NPU |
-| `paste_mode` | `ctrl+v` ou `ctrl+shift+v` pour les terminaux |
-| `autostart` | lancement à l'ouverture de session |
-
-## Coût mesuré
-
-Processus complet (modèle chargé, pastille, crochet clavier), mesuré sur la
-machine ci-dessus :
-
-| Situation | CPU | RAM |
-|---|---|---|
-| Au repos | **0,000 %** d'un cœur | 3,6 Go |
-| Pendant l'écoute | **0,94 %** d'un cœur | 3,6 Go |
-| Coût d'une frappe quelconque | **20 µs** | — |
-
-La pastille coûte 0,38 ms par image : le fond et le texte sont mis en cache,
-seules les barres de l'onde sont recalculées, sur une bande de 96 pixels.
-
-## Comment ça marche
-
-```
-crochet clavier (WH_KEYBOARD_LL)
-        │
-        ▼
-capture micro 16 kHz ──► segmentation (VAD énergie, 20 ms)
-        │                         │
-        │                         ▼
-        │                 segments ≤ 24 s
-        ▼                         ▼
-  pastille (GDI)  ◄──── Whisper FP16 sur NPU
-                                  │
-                                  ▼
-                 presse-papier + Ctrl+V (SendInput)
-```
-
-- **Aucun framework graphique au repos.** La pastille est une fenêtre en
-  couches Win32 dessinée dans un DIB 32 bits ; le texte est rendu par GDI puis
-  composé en alpha.
-- **Crochet clavier plutôt que `RegisterHotKey`.** Windows se réserve
-  Ctrl+Win, que `RegisterHotKey` refuse d'enregistrer ; un crochet bas niveau
-  accepte n'importe quelle combinaison et ne s'exécute qu'à la frappe. Si le
-  crochet ne peut pas être installé, le code retombe sur une scrutation à
-  30 Hz (`GetAsyncKeyState`).
-- **Découpage intelligent.** Le segment se ferme sur un silence réel, jamais
-  au milieu d'un mot, et la transcription commence avant que vous ayez fini de
-  parler. Une dictée longue ne s'accumule pas en mémoire : seuls le segment
-  courant et le texte produit sont conservés.
-
-## Limites connues
-
-- `Ctrl+V` n'est pas honoré par certains terminaux et applications élevées ;
-  `paste_mode` accepte `ctrl+shift+v` pour ces cas.
-- Les segments sont transcrits indépendamment : sans contexte des phrases
-  précédentes, un homophone isolé peut être mal choisi.
-- `large-v3` complet et sa variante int8 ne s'exécutent pas sur ce NPU ;
-  `turbo` est le plafond matériel.
-
-## Pièges du NPU, déjà traités dans le code
-
-Ces trois défauts d'`openvino_genai` coûtent des heures si on ne les connaît
-pas ; ils sont contournés explicitement dans `wispr/asr.py`.
+Trois défauts d'`openvino_genai` coûtent des heures si on ne les connaît pas ;
+ils sont contournés dans `wispr/asr.py`.
 
 1. **`return_timestamps=True` est obligatoire.** Sans lui, le pipeline renvoie
    une chaîne vide sur une fraction importante des entrées (13 % des segments
-   de référence). Le chemin « notimestamps » a une porte anti-parole
-   défaillante.
-2. **Une entrée de 30,0 s pile renvoie du vide.** Le contenu est donc plafonné
-   à 24 s.
-3. **`hotwords` et `initial_prompt` font échouer l'inférence sur NPU**
-   (`infer_request`), silencieusement côté texte. Le dictionnaire passe par un
-   remplacement déterministe après transcription.
+   de référence).
+2. **Une entrée de 30,0 s pile renvoie du vide.** Le contenu est plafonné à
+   24 s.
+3. **`hotwords` et `initial_prompt` font échouer l'inférence** sur NPU,
+   silencieusement côté texte. Le dictionnaire passe par un remplacement
+   déterministe après transcription.
 
 ## Licence
 
-Apache 2.0 — voir `LICENSE`.
+Apache 2.0 — voir [LICENSE](LICENSE).
