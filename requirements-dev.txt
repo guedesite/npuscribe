@@ -1,0 +1,8 @@
+openvino>=2026.4
+openvino-genai>=2026.4
+sounddevice>=0.5
+numpy>=2.0
+
+# outils uniquement (tools/)
+soundfile>=0.12
+huggingface_hub>=0.30

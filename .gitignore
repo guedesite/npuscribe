@@ -1,0 +1,15 @@
+.venv/
+models/
+cache_npu/
+config.json
+__pycache__/
+*.pyc
+preview_*.png
+research/*.log
+history.jsonl
+build/
+dist/
+dist_installer/
+build.log
+install.log
+exe.log

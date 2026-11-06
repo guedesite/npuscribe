@@ -1,0 +1,4 @@
+openvino>=2026.4
+openvino-genai>=2026.4
+sounddevice>=0.5
+numpy>=2.0
